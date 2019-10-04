@@ -1,0 +1,107 @@
+---
+title: "TidyTuesday1"
+author: "Julia Frederick"
+date: "10/3/2019"
+output: html_document
+---
+
+### This week's TidyTuesday is on Pizza Places
+Lets load in the data
+```{r, load data}
+pizza_jared <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-10-01/pizza_jared.csv")
+pizza_barstool <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-10-01/pizza_barstool.csv")
+pizza_datafiniti <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-10-01/pizza_datafiniti.csv")
+```
+
+### Examine the data
+```{r, summary data}
+summary(pizza_datafiniti)
+```
+
+### Load in the libraries needed
+```{r,libraries}
+library(tidyverse)
+library(ggplot2)
+library(magrittr)
+library(dplyr)
+```
+
+
+### Visualize the data
+How many pizza places are there per state
+```{r, graph pizza and state}
+#finding out how many places serve pizza per state
+pizzastate <- pizza_datafiniti %>% group_by(province) %>% summarize(npizza = length(name))
+
+#quick plot of pizza by state
+ggplot(pizzastate, aes(x=province, y=npizza)) +
+  geom_point()
+summary(pizzastate)
+which.max(pizzastate$npizza)
+pizzastate$province[31]
+```
+
+### New York has a lot of pizza places!
+It has 2640 pizza places - lets look more at those
+```{r, subset newyork}
+nypizza <- subset(pizza_datafiniti, province == "NY")
+```
+
+Some places appear to be duplicated, lets keep only those that are unique
+```{r, finding all unique pizza places}
+#number of times a place is listed
+chain <- nypizza %>% group_by(name) %>% summarize(nlocations = length(latitude))
+#joining previous table to current
+nypizza %<>% left_join(.,chain)
+#each address is only listed once now
+unchain <- distinct(nypizza, address, .keep_all = TRUE)
+```
+
+Are they evenly distributed?
+```{r}
+NYcities <- unchain %>% group_by(city) %>% summarize(npp = length(latitude))
+ggplot(NYcities) +
+  geom_bar(aes(x=npp))
+```
+
+No, one city appears to have way more than the others
+```{r}
+which.max(NYcities$npp)
+NYcities$city[92]
+```
+
+### New York City has the most, no surprise there.
+The `pizza_barstool` dataset looks specifically at New York City so let's switch to there
+
+```{r}
+summary(pizza_barstool)
+```
+
+What is the average rating of a pizza place in NYC 
+```{r}
+summary(pizza_barstool$review_stats_dave_average_score)
+
+ggplot(pizza_barstool) +
+  geom_bar(aes(x=review_stats_dave_average_score)) +
+  ggtitle("Distribution of pizza ratings in New York City") +
+      theme(plot.title = element_text(lineheight = .8, face="bold")) +
+  xlab("Average Review Rating from Dave") +
+  ylab("Number of places with that score") +
+  geom_vline(xintercept = 6.623, color = "red")
+``` 
+
+For those that are "Above Average" what is the price level?
+```{r}
+aboveavg <- subset(pizza_barstool, review_stats_dave_average_score >= 6.623)
+
+ggplot(aboveavg) +
+  geom_bar(aes(x=review_stats_dave_average_score)) +
+  ggtitle("Distribution of ABOVE AVERAGE pizza ratings by\n price level in New York City") +
+      theme(plot.title = element_text(lineheight = .8, face="bold")) + 
+  facet_grid(.~price_level) +
+  xlab("Average Review Rating from Dave") +
+  ylab("Number of places with that score") 
+```
+
+  
+
